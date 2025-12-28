@@ -1,0 +1,1077 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>2D 가구배치 프로토타입</title>
+  <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:rgba(255,255,255,.03);
+      --line:rgba(255,255,255,.10);
+      --text:#e8eefc;
+    }
+    body{ margin:0; font-family:system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--text); }
+    .wrap{ display:grid; grid-template-columns:280px 1fr; height:100vh; }
+    .panel{ padding:14px; border-right:1px solid var(--line); background:var(--panel); overflow:auto; }
+    .panel h2{ font-size:14px; margin:0 0 10px; opacity:.92; }
+    .panel h3{ font-size:13px; margin:16px 0 8px; opacity:.85; border-top:1px solid var(--line); padding-top:12px; }
+    .hint{ font-size:12px; opacity:.75; line-height:1.4; }
+    .kv{ display:grid; grid-template-columns:90px 1fr; gap:8px; align-items:center; margin:6px 0; }
+    .row{ display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
+    button, select, input, textarea{
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      padding:8px 10px;
+      border-radius:10px;
+      font-size:12px;
+      outline:none;
+    }
+    button{ cursor:pointer; }
+    button:hover{ background:rgba(255,255,255,.10); }
+    button.active{ background:rgba(100,200,255,.25); border-color:rgba(100,200,255,.5); }
+    textarea{ width:100%; height:160px; resize:vertical; }
+    select{ padding:6px 8px; }
+    .stageWrap{ position:relative; overflow:auto; }
+    .topbar{
+      position:absolute; left:10px; top:10px; z-index:10;
+      background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.10);
+      border-radius:12px; padding:8px 10px; backdrop-filter: blur(6px);
+      font-size:12px;
+    }
+    .badge{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.15); margin-left:8px; opacity:.9; }
+    .tab-row{ display:flex; gap:4px; margin-bottom:12px; }
+    .tab-row button{ flex:1; padding:10px 6px; font-size:11px; }
+    .section{ display:none; }
+    .section.active{ display:block; }
+    input[type="number"]{ width:60px; }
+    input[type="text"]{ width:100%; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <h2>2D 평면도 에디터</h2>
+
+      <!-- 탭 버튼 -->
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="furniture">가구</button>
+        <button class="tab-btn" data-tab="wall">벽</button>
+        <button class="tab-btn" data-tab="sash">샤시</button>
+        <button class="tab-btn" data-tab="door">문</button>
+        <button class="tab-btn" data-tab="pillar">기둥</button>
+      </div>
+
+      <!-- 가구 섹션 -->
+      <div id="sec-furniture" class="section active">
+        <div class="kv">
+          <div>이름</div>
+          <input id="furnitureName" type="text" value="가구" placeholder="예: 소파" />
+        </div>
+        <div class="kv">
+          <div>크기 (cm)</div>
+          <div class="row" style="margin:0">
+            <input id="furnitureW" type="number" value="100" min="10" step="5" placeholder="가로" />
+            <span>×</span>
+            <input id="furnitureH" type="number" value="50" min="10" step="5" placeholder="세로" />
+          </div>
+        </div>
+        <div class="kv">
+          <div>색상</div>
+          <input id="furnitureColor" type="color" value="#77e3ff" style="width:50px;height:28px;padding:2px;" />
+        </div>
+        <div class="row">
+          <button id="addFurniture" style="flex:1">가구 추가</button>
+        </div>
+      </div>
+
+      <!-- 벽 섹션 -->
+      <div id="sec-wall" class="section">
+        <div class="kv">
+          <div>위치 X (cm)</div>
+          <input id="wallX" type="number" value="100" step="10" />
+        </div>
+        <div class="kv">
+          <div>위치 Y (cm)</div>
+          <input id="wallY" type="number" value="100" step="10" />
+        </div>
+        <div class="kv">
+          <div>가로 (cm)</div>
+          <input id="wallW" type="number" value="100" min="10" step="10" />
+        </div>
+        <div class="kv">
+          <div>세로 (cm)</div>
+          <input id="wallH" type="number" value="10" min="10" step="10" />
+        </div>
+        <div class="row">
+          <button id="addWall" style="flex:1">벽 추가</button>
+        </div>
+      </div>
+
+      <!-- 샤시 섹션 -->
+      <div id="sec-sash" class="section">
+        <div class="kv">
+          <div>위치 X (cm)</div>
+          <input id="sashX" type="number" value="100" step="10" />
+        </div>
+        <div class="kv">
+          <div>위치 Y (cm)</div>
+          <input id="sashY" type="number" value="100" step="10" />
+        </div>
+        <div class="kv">
+          <div>가로 (cm)</div>
+          <input id="sashW" type="number" value="200" min="10" step="10" />
+        </div>
+        <div class="kv">
+          <div>세로 (cm)</div>
+          <input id="sashH" type="number" value="10" min="10" step="10" />
+        </div>
+        <div class="row">
+          <button id="addSash" style="flex:1">샤시 추가</button>
+        </div>
+      </div>
+
+      <!-- 문 섹션 -->
+      <div id="sec-door" class="section">
+        <div class="kv">
+          <div>위치 X (cm)</div>
+          <input id="doorX" type="number" value="100" step="10" />
+        </div>
+        <div class="kv">
+          <div>위치 Y (cm)</div>
+          <input id="doorY" type="number" value="100" step="10" />
+        </div>
+        <div class="kv">
+          <div>문 폭 (cm)</div>
+          <input id="doorW" type="number" value="80" min="30" step="5" />
+        </div>
+        <div class="kv">
+          <div>방향</div>
+          <select id="doorDir">
+            <option value="up-left">위-왼쪽</option>
+            <option value="up-right">위-오른쪽</option>
+            <option value="down-left">아래-왼쪽</option>
+            <option value="down-right">아래-오른쪽</option>
+          </select>
+        </div>
+        <div class="row">
+          <button id="addDoor" style="flex:1">문 추가</button>
+        </div>
+      </div>
+
+      <!-- 기둥 섹션 -->
+      <div id="sec-pillar" class="section">
+        <div class="kv">
+          <div>위치 X (cm)</div>
+          <input id="pillarX" type="number" value="100" step="10" />
+        </div>
+        <div class="kv">
+          <div>위치 Y (cm)</div>
+          <input id="pillarY" type="number" value="100" step="10" />
+        </div>
+        <div class="kv">
+          <div>가로 (cm)</div>
+          <input id="pillarW" type="number" value="50" min="10" step="10" />
+        </div>
+        <div class="kv">
+          <div>세로 (cm)</div>
+          <input id="pillarH" type="number" value="50" min="10" step="10" />
+        </div>
+        <div class="row">
+          <button id="addPillar" style="flex:1">기둥 추가</button>
+        </div>
+      </div>
+
+      <!-- 공통 컨트롤 -->
+      <h3>선택 요소 조작</h3>
+      <div class="row">
+        <button id="rotateL">-90°</button>
+        <button id="rotateR">+90°</button>
+        <button id="deleteSel">삭제</button>
+        <button id="duplicateSel">복제</button>
+      </div>
+      <div class="row">
+        <button id="bringFront">앞으로</button>
+        <button id="sendBack">뒤로</button>
+      </div>
+
+      <h3>전체 관리</h3>
+      <div class="row">
+        <button id="clearAll">전체 삭제</button>
+        <button id="resetDefault">초기화</button>
+      </div>
+
+      <h3>저장/불러오기</h3>
+      <div class="row">
+        <button id="exportBtn">내보내기</button>
+        <button id="importBtn">불러오기</button>
+      </div>
+      <textarea id="jsonBox" spellcheck="false" placeholder="JSON 데이터"></textarea>
+
+      <div class="hint" style="margin-top:10px">
+        - 드래그: 이동<br/>
+        - 핸들: 크기/회전 변경<br/>
+        - Delete: 선택 삭제<br/>
+        - 방향키: 10cm 단위 이동
+      </div>
+    </div>
+
+    <div class="stageWrap">
+      <div class="topbar">
+        <span id="selInfo">선택 없음</span>
+        <span class="badge" id="selType">-</span>
+      </div>
+      <div id="stage" style="margin:8px;"></div>
+    </div>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+
+    // ========== 설정 ==========
+    const CONFIG = {
+      roomWCm: 1020,
+      roomHCm: 890,
+      wallThickCm: 10,
+      gridCm: 10,
+      pxPerCm: 1
+    };
+
+    // ========== 데이터 (동적) ==========
+    let houseData = {
+      walls: [],
+      sashes: [],
+      doors: [],
+      pillars: [],
+      furniture: []
+    };
+
+    let idCounter = 1;
+    function genId(prefix) {
+      return `${prefix}-${idCounter++}`;
+    }
+
+    // ========== 초기 데이터 (하드코딩) ==========
+    function getDefaultData() {
+      return {
+        walls: [
+          // 외벽
+          { id: "w-outer-top", x: 0, y: 0, w: 1020, h: 10 },
+          { id: "w-outer-bottom", x: 630, y: 880, w: 390, h: 10 },
+          { id: "w-outer-left", x: 0, y: 0, w: 10, h: 720 },
+          { id: "w-outer-right", x: 1010, y: 0, w: 10, h: 890 },
+          // 내벽 - 좌상단 발코니/침실1 경계
+          { id: "w-1", x: 0, y: 270, w: 140, h: 10 },
+          // 침실1
+          { id: "w-2", x: 370, y: 0, w: 10, h: 280 },
+          { id: "w-3", x: 140, y: 270, w: 240, h: 10 },
+          // 침실2
+          { id: "w-4", x: 270, y: 280, w: 10, h: 290 },
+          // 발코니2
+          { id: "w-5", x: 270, y: 580, w: 10, h: 140 },
+          { id: "w-6", x: 0, y: 720, w: 280, h: 10 },
+          // 거실/발코니 경계
+          { id: "w-7", x: 270, y: 700, w: 10, h: 160 },
+          { id: "w-8", x: 270, y: 860, w: 360, h: 10 },
+          { id: "w-9", x: 630, y: 860, w: 10, h: 30 },
+          // 침실3
+          { id: "w-10", x: 630, y: 420, w: 10, h: 330 },
+          { id: "w-11", x: 630, y: 420, w: 390, h: 10 },
+          // 팬트리
+          { id: "w-12", x: 520, y: 0, w: 10, h: 220 },
+          { id: "w-13", x: 570, y: 0, w: 10, h: 220 },
+          { id: "w-14", x: 520, y: 220, w: 60, h: 10 },
+          // 주방/화장실 경계
+          { id: "w-15", x: 760, y: 0, w: 10, h: 250 },
+          // 화장실
+          { id: "w-16", x: 760, y: 250, w: 220, h: 10 },
+          { id: "w-17", x: 760, y: 420, w: 220, h: 10 },
+          { id: "w-18", x: 760, y: 250, w: 10, h: 170 },
+          { id: "w-19", x: 980, y: 250, w: 10, h: 170 },
+          { id: "w-20", x: 980, y: 250, w: 40, h: 10 },
+        ],
+        sashes: [
+          // 좌상단 발코니↔침실1 (세로)
+          { id: "s-1", x: 130, y: 0, w: 10, h: 270 },
+          // 침실2↔발코니 (가로)
+          { id: "s-2", x: 0, y: 570, w: 280, h: 10 },
+          // 거실↔발코니 (가로)
+          { id: "s-3", x: 270, y: 700, w: 360, h: 10 },
+          // 침실3↔발코니 (가로)
+          { id: "s-4", x: 630, y: 750, w: 390, h: 10 },
+        ],
+        doors: [
+          // 침실1 문 (경첩: 370,260, 2사분면으로 열림)
+          { id: "d-1", x: 370, y: 260, w: 50, dir: "up-left", rotation: 0 },
+          // 침실2 문 (경첩: 270,290, 3사분면으로 열림)
+          { id: "d-2", x: 270, y: 290, w: 50, dir: "down-left", rotation: 0 },
+          // 화장실 문 (경첩: 760,400, 1사분면으로 열림)
+          { id: "d-3", x: 760, y: 400, w: 50, dir: "up-right", rotation: 0 },
+          // 침실3 문 (경첩: 650,420, 4사분면으로 열림)
+          { id: "d-4", x: 650, y: 420, w: 50, dir: "down-right", rotation: 0 },
+        ],
+        pillars: [
+          // 침실3 발코니 내력기둥
+          { id: "p-1", x: 890, y: 760, w: 120, h: 50 },
+          // 우상단 기둥
+          { id: "p-2", x: 760, y: 0, w: 260, h: 250 },
+        ],
+        furniture: []
+      };
+    }
+
+    // ========== Konva 관련 ==========
+    let stage, layer, uiLayer, transformer;
+    let selected = null;
+
+    function pxFromCm(cm) { return cm * CONFIG.pxPerCm; }
+    function cmFromPx(px) { return px / CONFIG.pxPerCm; }
+    function snap(v, grid) { return Math.round(v / grid) * grid; }
+
+    function updateSelInfo() {
+      if (!selected) {
+        $("selInfo").textContent = "선택 없음";
+        $("selType").textContent = "-";
+        return;
+      }
+      const meta = selected.getAttr("meta") || {};
+      const type = meta.type || "unknown";
+      const typeNames = { wall: "벽", sash: "샤시", door: "문", pillar: "기둥", furniture: "가구" };
+      $("selInfo").textContent = meta.name || typeNames[type] || type;
+      $("selType").textContent = typeNames[type] || type;
+    }
+
+    function select(node) {
+      selected = node;
+      transformer.nodes(node ? [node] : []);
+      updateSelInfo();
+      uiLayer.batchDraw();
+    }
+
+    function destroyStage() {
+      if (stage) stage.destroy();
+      stage = null; layer = null; uiLayer = null; transformer = null;
+      selected = null;
+      $("stage").innerHTML = "";
+    }
+
+    function initStage() {
+      const wPx = pxFromCm(CONFIG.roomWCm);
+      const hPx = pxFromCm(CONFIG.roomHCm);
+
+      destroyStage();
+      $("stage").style.width = wPx + "px";
+      $("stage").style.height = hPx + "px";
+
+      stage = new Konva.Stage({ container: "stage", width: wPx, height: hPx });
+      layer = new Konva.Layer();
+      uiLayer = new Konva.Layer();
+
+      // 배경
+      layer.add(new Konva.Rect({
+        x: 0, y: 0, width: wPx, height: hPx,
+        fill: "rgba(255,255,255,0.04)",
+        stroke: "rgba(255,255,255,0.18)",
+        strokeWidth: 2,
+        cornerRadius: 14,
+        listening: true,
+        name: "background"
+      }));
+
+      // 그리드
+      drawGrid();
+
+      // Transformer
+      transformer = new Konva.Transformer({
+        rotateEnabled: true,
+        rotationSnaps: [0, 90, 180, 270],
+        enabledAnchors: ["top-left", "top-right", "bottom-left", "bottom-right", "middle-left", "middle-right", "top-center", "bottom-center"],
+        anchorFill: "#5bd6ff",
+        anchorStroke: "rgba(0,0,0,.4)",
+        anchorSize: 10,
+        borderStroke: "rgba(91,214,255,.9)",
+        borderDash: [6, 4],
+        keepRatio: false
+      });
+      uiLayer.add(transformer);
+
+      stage.add(layer);
+      stage.add(uiLayer);
+
+      stage.on("mousedown touchstart", e => {
+        if (e.target === stage || e.target.name() === "background" || e.target.name() === "gridLine") {
+          select(null);
+        }
+      });
+
+      // 모든 요소 그리기
+      renderAll();
+    }
+
+    function drawGrid() {
+      const gridPx = pxFromCm(CONFIG.gridCm);
+      for (let x = gridPx; x < stage.width(); x += gridPx) {
+        layer.add(new Konva.Line({
+          points: [x, 0, x, stage.height()],
+          stroke: "rgba(255,255,255,0.06)",
+          strokeWidth: 1,
+          name: "gridLine",
+          listening: false
+        }));
+      }
+      for (let y = gridPx; y < stage.height(); y += gridPx) {
+        layer.add(new Konva.Line({
+          points: [0, y, stage.width(), y],
+          stroke: "rgba(255,255,255,0.06)",
+          strokeWidth: 1,
+          name: "gridLine",
+          listening: false
+        }));
+      }
+    }
+
+    function renderAll() {
+      // 기존 요소 제거 (배경, 그리드 제외)
+      layer.find(".element").forEach(n => n.destroy());
+      
+      // 벽
+      houseData.walls.forEach(w => createWallNode(w));
+      // 샤시
+      houseData.sashes.forEach(s => createSashNode(s));
+      // 기둥
+      houseData.pillars.forEach(p => createPillarNode(p));
+      // 문
+      houseData.doors.forEach(d => createDoorNode(d));
+      // 가구
+      houseData.furniture.forEach(f => createFurnitureNode(f));
+
+      layer.batchDraw();
+    }
+
+    // ========== 요소 생성 함수들 ==========
+
+    function makeNodeDraggable(node, dataArray, dataId) {
+      node.on("mousedown touchstart", e => {
+        e.cancelBubble = true;
+        select(node);
+      });
+
+      node.on("dragend", () => {
+        const gridPx = pxFromCm(CONFIG.gridCm);
+        node.x(snap(node.x(), gridPx));
+        node.y(snap(node.y(), gridPx));
+        syncNodeToData(node, dataArray, dataId);
+        layer.batchDraw();
+      });
+
+      node.on("transformend", () => {
+        syncNodeToData(node, dataArray, dataId);
+        layer.batchDraw();
+      });
+    }
+
+    function syncNodeToData(node, dataArray, dataId) {
+      const data = dataArray.find(d => d.id === dataId);
+      if (!data) return;
+
+      const meta = node.getAttr("meta") || {};
+      
+      if (meta.type === "furniture") {
+        const rect = node.findOne(".frect");
+        data.x = cmFromPx(node.x());
+        data.y = cmFromPx(node.y());
+        data.w = cmFromPx(rect.width() * node.scaleX());
+        data.h = cmFromPx(rect.height() * node.scaleY());
+        data.rotation = node.rotation();
+        // 스케일 리셋
+        const newW = rect.width() * node.scaleX();
+        const newH = rect.height() * node.scaleY();
+        node.scaleX(1);
+        node.scaleY(1);
+        rect.width(newW);
+        rect.height(newH);
+        rect.x(-newW / 2);
+        rect.y(-newH / 2);
+        // 라벨 위치 업데이트
+        const label = node.findOne(".flabel");
+        const dims = node.findOne(".fdims");
+        if (label) { label.x(-newW / 2 + 8); label.y(-newH / 2 + 6); }
+        if (dims) { dims.text(`${Math.round(cmFromPx(newW))}×${Math.round(cmFromPx(newH))}cm`); dims.x(-newW / 2 + 8); dims.y(-newH / 2 + 26); }
+      } else if (meta.type === "door") {
+        // 벽 중앙 오프셋을 빼서 원래 벽 좌표로 저장
+        const wallOffset = CONFIG.wallThickCm / 2;
+        const rot = node.rotation() || 0;
+        const isVertical = (rot === 0 || rot === 180);
+        data.x = cmFromPx(node.x()) - (isVertical ? wallOffset : 0);
+        data.y = cmFromPx(node.y()) - (isVertical ? 0 : wallOffset);
+        data.rotation = rot;
+      } else {
+        // 벽, 샤시, 기둥
+        const rect = node.findOne("Rect");
+        if (rect) {
+          data.x = cmFromPx(node.x());
+          data.y = cmFromPx(node.y());
+          data.w = cmFromPx(rect.width() * node.scaleX());
+          data.h = cmFromPx(rect.height() * node.scaleY());
+          // 스케일 리셋
+          rect.width(rect.width() * node.scaleX());
+          rect.height(rect.height() * node.scaleY());
+          node.scaleX(1);
+          node.scaleY(1);
+        }
+      }
+    }
+
+    function createWallNode(data) {
+      const g = new Konva.Group({
+        x: pxFromCm(data.x),
+        y: pxFromCm(data.y),
+        draggable: true,
+        name: "element"
+      });
+      g.setAttr("meta", { type: "wall", id: data.id });
+
+      g.add(new Konva.Rect({
+        x: 0, y: 0,
+        width: pxFromCm(data.w),
+        height: pxFromCm(data.h),
+        fill: "rgba(255,255,255,0.14)",
+        stroke: "rgba(255,255,255,0.22)",
+        strokeWidth: 1
+      }));
+
+      makeNodeDraggable(g, houseData.walls, data.id);
+      layer.add(g);
+      return g;
+    }
+
+    function createSashNode(data) {
+      const g = new Konva.Group({
+        x: pxFromCm(data.x),
+        y: pxFromCm(data.y),
+        draggable: true,
+        name: "element"
+      });
+      g.setAttr("meta", { type: "sash", id: data.id });
+
+      const isHorizontal = data.w > data.h;
+      const frameCm = 30;
+      const wPx = pxFromCm(data.w);
+      const hPx = pxFromCm(data.h);
+      const framePx = pxFromCm(frameCm);
+
+      // 전체 히트 영역 (투명)
+      g.add(new Konva.Rect({
+        x: 0, y: 0,
+        width: wPx, height: hPx,
+        fill: "transparent",
+        name: "hitArea"
+      }));
+
+      if (isHorizontal && data.w > frameCm * 2) {
+        // 좌우 프레임
+        g.add(new Konva.Rect({ x: 0, y: 0, width: framePx, height: hPx, fill: "rgba(255,255,255,0.14)", stroke: "rgba(255,255,255,0.22)", strokeWidth: 1 }));
+        g.add(new Konva.Rect({ x: wPx - framePx, y: 0, width: framePx, height: hPx, fill: "rgba(255,255,255,0.14)", stroke: "rgba(255,255,255,0.22)", strokeWidth: 1 }));
+        // 중간 유리
+        const glassX = framePx;
+        const glassW = wPx - framePx * 2;
+        g.add(new Konva.Rect({ x: glassX, y: 0, width: glassW, height: hPx, fill: "rgba(100,200,255,0.08)" }));
+        const lineCount = Math.max(2, Math.floor(cmFromPx(glassW) / 50));
+        const spacing = glassW / (lineCount + 1);
+        for (let i = 1; i <= lineCount; i++) {
+          g.add(new Konva.Line({ points: [glassX + spacing * i, 0, glassX + spacing * i, hPx], stroke: "rgba(100,200,255,0.7)", strokeWidth: 2 }));
+        }
+        g.add(new Konva.Line({ points: [glassX, 0, glassX + glassW, 0], stroke: "rgba(100,200,255,0.5)", strokeWidth: 1 }));
+        g.add(new Konva.Line({ points: [glassX, hPx, glassX + glassW, hPx], stroke: "rgba(100,200,255,0.5)", strokeWidth: 1 }));
+      } else if (!isHorizontal && data.h > frameCm * 2) {
+        // 상하 프레임
+        g.add(new Konva.Rect({ x: 0, y: 0, width: wPx, height: framePx, fill: "rgba(255,255,255,0.14)", stroke: "rgba(255,255,255,0.22)", strokeWidth: 1 }));
+        g.add(new Konva.Rect({ x: 0, y: hPx - framePx, width: wPx, height: framePx, fill: "rgba(255,255,255,0.14)", stroke: "rgba(255,255,255,0.22)", strokeWidth: 1 }));
+        // 중간 유리
+        const glassY = framePx;
+        const glassH = hPx - framePx * 2;
+        g.add(new Konva.Rect({ x: 0, y: glassY, width: wPx, height: glassH, fill: "rgba(100,200,255,0.08)" }));
+        const lineCount = Math.max(2, Math.floor(cmFromPx(glassH) / 50));
+        const spacing = glassH / (lineCount + 1);
+        for (let i = 1; i <= lineCount; i++) {
+          g.add(new Konva.Line({ points: [0, glassY + spacing * i, wPx, glassY + spacing * i], stroke: "rgba(100,200,255,0.7)", strokeWidth: 2 }));
+        }
+        g.add(new Konva.Line({ points: [0, glassY, 0, glassY + glassH], stroke: "rgba(100,200,255,0.5)", strokeWidth: 1 }));
+        g.add(new Konva.Line({ points: [wPx, glassY, wPx, glassY + glassH], stroke: "rgba(100,200,255,0.5)", strokeWidth: 1 }));
+      } else {
+        // 작은 샤시는 전체 파란색
+        g.add(new Konva.Rect({ x: 0, y: 0, width: wPx, height: hPx, fill: "rgba(100,200,255,0.15)", stroke: "rgba(100,200,255,0.6)", strokeWidth: 2, dash: [6, 4] }));
+      }
+
+      makeNodeDraggable(g, houseData.sashes, data.id);
+      layer.add(g);
+      return g;
+    }
+
+    function createPillarNode(data) {
+      const g = new Konva.Group({
+        x: pxFromCm(data.x),
+        y: pxFromCm(data.y),
+        draggable: true,
+        name: "element"
+      });
+      g.setAttr("meta", { type: "pillar", id: data.id });
+
+      const wPx = pxFromCm(data.w);
+      const hPx = pxFromCm(data.h);
+
+      g.add(new Konva.Rect({
+        x: 0, y: 0, width: wPx, height: hPx,
+        fill: "rgba(255,255,255,0.08)",
+        stroke: "rgba(255,255,255,0.4)",
+        strokeWidth: 2
+      }));
+      // X자
+      g.add(new Konva.Line({ points: [0, 0, wPx, hPx], stroke: "rgba(255,255,255,0.5)", strokeWidth: 1 }));
+      g.add(new Konva.Line({ points: [wPx, 0, 0, hPx], stroke: "rgba(255,255,255,0.5)", strokeWidth: 1 }));
+
+      makeNodeDraggable(g, houseData.pillars, data.id);
+      layer.add(g);
+      return g;
+    }
+
+    function createDoorNode(data) {
+      // 벽 중앙에 문을 배치하기 위한 오프셋 (벽 두께의 절반)
+      const wallOffset = CONFIG.wallThickCm / 2;
+      const rot = data.rotation || 0;
+      // rotation에 따라 오프셋 방향 결정
+      const isVertical = (rot === 0 || rot === 180);
+      const offsetX = isVertical ? wallOffset : 0;
+      const offsetY = isVertical ? 0 : wallOffset;
+
+      const g = new Konva.Group({
+        x: pxFromCm(data.x + offsetX),
+        y: pxFromCm(data.y + offsetY),
+        rotation: rot,
+        draggable: true,
+        name: "element"
+      });
+      g.setAttr("meta", { type: "door", id: data.id, dir: data.dir });
+
+      const leaf = pxFromCm(data.w);
+      const thick = pxFromCm(CONFIG.wallThickCm);
+
+      // 방향 파싱: up-left, up-right, down-left, down-right
+      const [yDir, xDir] = data.dir.split("-");
+      const dirY = yDir === "up" ? -1 : 1;
+      const dirX = xDir === "left" ? -1 : 1;
+
+      // 닫힌 문 (세로선)
+      g.add(new Konva.Line({
+        points: [0, 0, 0, dirY * leaf],
+        stroke: "rgba(255,200,120,0.75)",
+        strokeWidth: thick
+      }));
+      // 열린 문 (가로선)
+      g.add(new Konva.Line({
+        points: [0, 0, dirX * leaf, 0],
+        stroke: "rgba(255,200,120,0.75)",
+        strokeWidth: 2
+      }));
+      // 호
+      let startAngle = 0;
+      if (dirX === -1 && dirY === -1) startAngle = 180;
+      else if (dirX === 1 && dirY === -1) startAngle = 270;
+      else if (dirX === 1 && dirY === 1) startAngle = 0;
+      else if (dirX === -1 && dirY === 1) startAngle = 90;
+      g.add(new Konva.Arc({
+        x: 0, y: 0,
+        innerRadius: leaf, outerRadius: leaf,
+        angle: 90, rotation: startAngle,
+        stroke: "rgba(255,200,120,0.5)",
+        strokeWidth: 1
+      }));
+
+      makeNodeDraggable(g, houseData.doors, data.id);
+      layer.add(g);
+      return g;
+    }
+
+    function createFurnitureNode(data) {
+      const wPx = pxFromCm(data.w);
+      const hPx = pxFromCm(data.h);
+      const cx = pxFromCm(data.x);
+      const cy = pxFromCm(data.y);
+
+      const g = new Konva.Group({
+        x: cx, y: cy,
+        rotation: data.rotation || 0,
+        draggable: true,
+        name: "element"
+      });
+      g.setAttr("meta", { type: "furniture", id: data.id, name: data.name, color: data.color });
+
+      g.add(new Konva.Rect({
+        x: -wPx / 2, y: -hPx / 2,
+        width: wPx, height: hPx,
+        fill: data.color,
+        opacity: 0.28,
+        stroke: data.color,
+        strokeWidth: 2,
+        cornerRadius: 8,
+        name: "frect"
+      }));
+      g.add(new Konva.Text({
+        x: -wPx / 2 + 8, y: -hPx / 2 + 6,
+        text: data.name,
+        fontSize: 14,
+        fill: "rgba(255,255,255,.92)",
+        name: "flabel"
+      }));
+      g.add(new Konva.Text({
+        x: -wPx / 2 + 8, y: -hPx / 2 + 26,
+        text: `${Math.round(data.w)}×${Math.round(data.h)}cm`,
+        fontSize: 12,
+        fill: "rgba(255,255,255,.82)",
+        name: "fdims"
+      }));
+
+      makeNodeDraggable(g, houseData.furniture, data.id);
+      layer.add(g);
+      return g;
+    }
+
+    // ========== 추가 함수들 ==========
+
+    function addWall() {
+      const data = {
+        id: genId("w"),
+        x: Number($("wallX").value) || 100,
+        y: Number($("wallY").value) || 100,
+        w: Number($("wallW").value) || 100,
+        h: Number($("wallH").value) || 10
+      };
+      houseData.walls.push(data);
+      const node = createWallNode(data);
+      select(node);
+      layer.batchDraw();
+    }
+
+    function addSash() {
+      const data = {
+        id: genId("s"),
+        x: Number($("sashX").value) || 100,
+        y: Number($("sashY").value) || 100,
+        w: Number($("sashW").value) || 200,
+        h: Number($("sashH").value) || 10
+      };
+      houseData.sashes.push(data);
+      const node = createSashNode(data);
+      select(node);
+      layer.batchDraw();
+    }
+
+    function addDoor() {
+      const data = {
+        id: genId("d"),
+        x: Number($("doorX").value) || 100,
+        y: Number($("doorY").value) || 100,
+        w: Number($("doorW").value) || 80,
+        dir: $("doorDir").value || "up-left",
+        rotation: 0
+      };
+      houseData.doors.push(data);
+      const node = createDoorNode(data);
+      select(node);
+      layer.batchDraw();
+    }
+
+    function addPillar() {
+      const data = {
+        id: genId("p"),
+        x: Number($("pillarX").value) || 100,
+        y: Number($("pillarY").value) || 100,
+        w: Number($("pillarW").value) || 50,
+        h: Number($("pillarH").value) || 50
+      };
+      houseData.pillars.push(data);
+      const node = createPillarNode(data);
+      select(node);
+      layer.batchDraw();
+    }
+
+    function addFurniture() {
+      const data = {
+        id: genId("f"),
+        name: $("furnitureName").value || "가구",
+        x: CONFIG.roomWCm / 2,
+        y: CONFIG.roomHCm / 2,
+        w: Number($("furnitureW").value) || 100,
+        h: Number($("furnitureH").value) || 50,
+        color: $("furnitureColor").value || "#77e3ff",
+        rotation: 0
+      };
+      houseData.furniture.push(data);
+      const node = createFurnitureNode(data);
+      select(node);
+      layer.batchDraw();
+    }
+
+    function deleteSelected() {
+      if (!selected) return;
+      const meta = selected.getAttr("meta") || {};
+      const type = meta.type;
+      const id = meta.id;
+
+      if (type === "wall") houseData.walls = houseData.walls.filter(d => d.id !== id);
+      else if (type === "sash") houseData.sashes = houseData.sashes.filter(d => d.id !== id);
+      else if (type === "door") houseData.doors = houseData.doors.filter(d => d.id !== id);
+      else if (type === "pillar") houseData.pillars = houseData.pillars.filter(d => d.id !== id);
+      else if (type === "furniture") houseData.furniture = houseData.furniture.filter(d => d.id !== id);
+
+      selected.destroy();
+      select(null);
+      layer.batchDraw();
+    }
+
+    function duplicateSelected() {
+      if (!selected) return;
+      const meta = selected.getAttr("meta") || {};
+      const type = meta.type;
+      const id = meta.id;
+
+      let sourceArray, newData;
+      if (type === "wall") {
+        sourceArray = houseData.walls;
+        const src = sourceArray.find(d => d.id === id);
+        if (!src) return;
+        newData = { ...src, id: genId("w"), x: src.x + 20, y: src.y + 20 };
+        houseData.walls.push(newData);
+        select(createWallNode(newData));
+      } else if (type === "sash") {
+        sourceArray = houseData.sashes;
+        const src = sourceArray.find(d => d.id === id);
+        if (!src) return;
+        newData = { ...src, id: genId("s"), x: src.x + 20, y: src.y + 20 };
+        houseData.sashes.push(newData);
+        select(createSashNode(newData));
+      } else if (type === "door") {
+        sourceArray = houseData.doors;
+        const src = sourceArray.find(d => d.id === id);
+        if (!src) return;
+        newData = { ...src, id: genId("d"), x: src.x + 20, y: src.y + 20 };
+        houseData.doors.push(newData);
+        select(createDoorNode(newData));
+      } else if (type === "pillar") {
+        sourceArray = houseData.pillars;
+        const src = sourceArray.find(d => d.id === id);
+        if (!src) return;
+        newData = { ...src, id: genId("p"), x: src.x + 20, y: src.y + 20 };
+        houseData.pillars.push(newData);
+        select(createPillarNode(newData));
+      } else if (type === "furniture") {
+        sourceArray = houseData.furniture;
+        const src = sourceArray.find(d => d.id === id);
+        if (!src) return;
+        newData = { ...src, id: genId("f"), x: src.x + 20, y: src.y + 20 };
+        houseData.furniture.push(newData);
+        select(createFurnitureNode(newData));
+      }
+      layer.batchDraw();
+    }
+
+    function rotateSelected(delta) {
+      if (!selected) return;
+      const meta = selected.getAttr("meta") || {};
+      const curr = selected.rotation() || 0;
+      const newRot = (curr + delta + 360) % 360;
+
+      if (meta.type === "door") {
+        // 문 회전 시 오프셋 재계산 필요
+        const data = houseData.doors.find(d => d.id === meta.id);
+        if (data) {
+          const wallOffset = CONFIG.wallThickCm / 2;
+          const wasVertical = (curr === 0 || curr === 180);
+          const isVertical = (newRot === 0 || newRot === 180);
+          
+          // 기존 오프셋 제거 후 새 오프셋 적용
+          let baseX = cmFromPx(selected.x()) - (wasVertical ? wallOffset : 0);
+          let baseY = cmFromPx(selected.y()) - (wasVertical ? 0 : wallOffset);
+          
+          selected.x(pxFromCm(baseX + (isVertical ? wallOffset : 0)));
+          selected.y(pxFromCm(baseY + (isVertical ? 0 : wallOffset)));
+          selected.rotation(newRot);
+          
+          data.x = baseX;
+          data.y = baseY;
+          data.rotation = newRot;
+        }
+      } else {
+        selected.rotation(newRot);
+        if (meta.type === "furniture") {
+          const data = houseData.furniture.find(d => d.id === meta.id);
+          if (data) data.rotation = newRot;
+        }
+      }
+      layer.batchDraw();
+      uiLayer.batchDraw();
+    }
+
+    function clearAll() {
+      houseData = { walls: [], sashes: [], doors: [], pillars: [], furniture: [] };
+      select(null);
+      renderAll();
+    }
+
+    function resetDefault() {
+      houseData = getDefaultData();
+      idCounter = 100; // 기본 데이터 ID와 충돌 방지
+      select(null);
+      renderAll();
+    }
+
+    function exportJson() {
+      const payload = {
+        version: 2,
+        room: { wCm: CONFIG.roomWCm, hCm: CONFIG.roomHCm },
+        gridCm: CONFIG.gridCm,
+        ...houseData
+      };
+      $("jsonBox").value = JSON.stringify(payload, null, 2);
+      $("jsonBox").focus();
+      $("jsonBox").select();
+    }
+
+    function importJson() {
+      let payload;
+      try {
+        payload = JSON.parse($("jsonBox").value || "{}");
+      } catch (e) {
+        alert("JSON 파싱 실패");
+        return;
+      }
+
+      if (payload.walls) houseData.walls = payload.walls;
+      if (payload.sashes) houseData.sashes = payload.sashes;
+      if (payload.doors) houseData.doors = payload.doors;
+      if (payload.pillars) houseData.pillars = payload.pillars;
+      if (payload.furniture) houseData.furniture = payload.furniture;
+
+      // ID 카운터 갱신
+      const allIds = [
+        ...houseData.walls.map(d => d.id),
+        ...houseData.sashes.map(d => d.id),
+        ...houseData.doors.map(d => d.id),
+        ...houseData.pillars.map(d => d.id),
+        ...houseData.furniture.map(d => d.id)
+      ];
+      const maxNum = allIds.reduce((max, id) => {
+        const m = id.match(/-(\d+)$/);
+        return m ? Math.max(max, parseInt(m[1])) : max;
+      }, 0);
+      idCounter = maxNum + 1;
+
+      select(null);
+      renderAll();
+    }
+
+    // ========== UI 바인딩 ==========
+
+    function bindUI() {
+      // 탭 전환
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+          document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+          btn.classList.add("active");
+          $("sec-" + btn.dataset.tab).classList.add("active");
+        });
+      });
+
+      // 추가 버튼
+      $("addFurniture").addEventListener("click", addFurniture);
+      $("addWall").addEventListener("click", addWall);
+      $("addSash").addEventListener("click", addSash);
+      $("addDoor").addEventListener("click", addDoor);
+      $("addPillar").addEventListener("click", addPillar);
+
+      // 조작 버튼
+      $("rotateL").addEventListener("click", () => rotateSelected(-90));
+      $("rotateR").addEventListener("click", () => rotateSelected(90));
+      $("deleteSel").addEventListener("click", deleteSelected);
+      $("duplicateSel").addEventListener("click", duplicateSelected);
+      $("bringFront").addEventListener("click", () => { if (selected) { selected.moveToTop(); layer.batchDraw(); }});
+      $("sendBack").addEventListener("click", () => { if (selected) { selected.moveToBottom(); layer.find(".background")[0]?.moveToBottom(); layer.batchDraw(); }});
+
+      // 전체 관리
+      $("clearAll").addEventListener("click", clearAll);
+      $("resetDefault").addEventListener("click", resetDefault);
+
+      // JSON
+      $("exportBtn").addEventListener("click", exportJson);
+      $("importBtn").addEventListener("click", importJson);
+
+      // 키보드
+      window.addEventListener("keydown", e => {
+        if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+        if (e.key === "Delete") {
+          deleteSelected();
+          e.preventDefault();
+          return;
+        }
+
+        if (!selected) return;
+        const step = pxFromCm(CONFIG.gridCm);
+        let moved = false;
+
+        if (e.key === "ArrowLeft") { selected.x(selected.x() - step); moved = true; }
+        if (e.key === "ArrowRight") { selected.x(selected.x() + step); moved = true; }
+        if (e.key === "ArrowUp") { selected.y(selected.y() - step); moved = true; }
+        if (e.key === "ArrowDown") { selected.y(selected.y() + step); moved = true; }
+
+        if (moved) {
+          const meta = selected.getAttr("meta") || {};
+          const type = meta.type;
+          const id = meta.id;
+          let arr;
+          if (type === "wall") arr = houseData.walls;
+          else if (type === "sash") arr = houseData.sashes;
+          else if (type === "door") arr = houseData.doors;
+          else if (type === "pillar") arr = houseData.pillars;
+          else if (type === "furniture") arr = houseData.furniture;
+          if (arr) syncNodeToData(selected, arr, id);
+          layer.batchDraw();
+          e.preventDefault();
+        }
+      });
+    }
+
+    // ========== 초기화 ==========
+
+    function autoFitScale() {
+      const stageWrap = document.querySelector(".stageWrap");
+      if (!stageWrap) return;
+      const pad = 36;
+      const availW = Math.max(300, stageWrap.clientWidth - pad);
+      const availH = Math.max(300, stageWrap.clientHeight - pad);
+      CONFIG.pxPerCm = Math.min(availW / CONFIG.roomWCm, availH / CONFIG.roomHCm);
+      CONFIG.pxPerCm = Math.max(0.4, Math.min(2.0, CONFIG.pxPerCm));
+    }
+
+    (function main() {
+      houseData = getDefaultData();
+      idCounter = 100;
+
+      autoFitScale();
+      initStage();
+      bindUI();
+
+      window.addEventListener("resize", () => {
+        const oldData = JSON.parse(JSON.stringify(houseData));
+        autoFitScale();
+        initStage();
+        houseData = oldData;
+        renderAll();
+      });
+    })();
+  </script>
+</body>
+</html>
